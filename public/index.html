@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<link rel="stylesheet" href="style.css">
+	<title>GitHubUI</title>
+</head>
+<header>
+
+	<form>
+		<input id="input" type="search" placeholder="Найти репозиторий">
+		<button id="search">Поиск</button>
+	</form>
+</header>
+<body id="body" >
+	<section id="repos-list">
+		<div class="repos-small-view" id="repo-small-view1"> 
+			<p> </p>
+		</div>
+	</section>
+</body>
+<footer id="paginator">
+		<button class="page-list" id="back-list">Назад</button>
+		<section id="pages-button-section"></section>
+		<button class="page-list" id="forward-list">Вперед</button>
+</footer>
+<script src="https://code.jquery.com/jquery-2.1.0.js"></script>
+<script>
+	var search = function (event){
+		event.preventDefault();//не перезагружаем страницу
+		inputRequest = document.getElementById("input").value;//введенные данные
+		//сохраняем введенные данные в sessionStorage
+		sessionStorage.setItem('inputRequest', inputRequest);
+		requestReposList(inputRequest);
+		
+	}
+	//api-запрос к gitHub
+	var requestReposList = function(requestText){
+
+		fetch('https://api.github.com/search/repositories?q='+requestText+'+&page='+currentPage+'&per_page=10&sort=stars&order=desc')
+		.then(response => response.json())
+		.then(data => {
+		  console.log(data) // Prints result from `response.json() 
+		  reposOnPage = data.items.length;
+		  showRepos(data.items);
+		  reposTemp = data.items;
+		})
+		.catch(error => console.error(error))
+	}
+
+	//вывод карточки репозитория
+	var showSelectedRepo = function (repo){
+		var parent = document.getElementById("repos-list");
+		var repoName = document.createElement("h2");
+		var languages = document.createElement("p");
+		var description = document.createElement("p");
+		var contributors = document.createElement("p");
+		var profileInfo = document.createElement("a");
+		
+		//[Название репозитория] - [кол-во звёзд на github] - [дата последнего коммита]
+		repoName.innerHTML = repo.full_name + "  stars: "+ repo.stargazers_count + "  last commit: "+repo.updated_at
+		//[Фото владельца репозитория, если есть] - [Nickname владельца репозитория с ссылкой на него]
+		if (repo.owner.avatar_url.indexOf('github')!==-1){
+			var profilePhoto = document.createElement("img");
+			profilePhoto.src = repo.owner.avatar_url;
+			profilePhoto.height = 50;
+		}
+		profileInfo.innerHTML = repo.owner.login;
+		profileInfo.href = repo.owner.html_url;
+		//[Список используемых языков в репозитории]
+		fetch(repo.languages_url)
+		.then(response => response.json())
+		.then(data => {
+		  console.log(data); // Prints result from `response.json() 
+		  languages.innerHTML = "Languages: "+ Object.keys(data);
+		})
+		.catch(error => console.error(error))
+
+		//[Краткое описание репозитория]
+		description.innerHTML = "Description: "+repo.description;
+
+		//[10 наиболее активных контрибьютеров]
+		fetch(repo.contributors_url+"?per_page=10&page=1")
+		.then(response => response.json())
+		.then(data => {
+		  console.log(data); // Prints result from `response.json() 
+		  var contributorsList="";
+		  for (var i=0;i<data.length; i++)
+			{contributorsList +=" "+data[i].login;}
+		  contributors.innerHTML = "Active contributors:"+contributorsList;
+		})
+		.catch(error => console.error(error))
+				
+		//добавляем элементы в дерево DOM
+		parent.appendChild(repoName);
+		parent.appendChild(profilePhoto);
+		parent.appendChild(profileInfo);
+		parent.appendChild(languages);
+		parent.appendChild(description);
+		parent.appendChild(contributors);
+
+
+	}
+
+
+	var showRepos = function(repos){
+		//очищаем старые репозитории
+		var oldParent = document.getElementById("repos-list");
+		var parent = document.createElement("section");
+		var body  = document.getElementById("body");
+		body.replaceChild(parent, oldParent);
+		parent.id = "repos-list";
+		//добавляем новые ссылки на страницы
+		for(var i=0;i<reposOnPage;i++){
+			var newDiv = document.createElement("div");
+			var repoName = document.createElement("h2")
+			var repoStars = document.createElement("p")
+			var repoLastCommit = document.createElement("p")
+			var repoLink = document.createElement("a")
+        	repoName.innerHTML = repos[i].full_name;
+        	repoStars.innerHTML =" stars: "+ repos[i].stargazers_count;
+        	repoLastCommit.innerHTML = " last commit: "+repos[i].updated_at;
+			repoLink.innerHTML = repos[i].svn_url;
+			repoName.id = i;
+        	// Добавляем созданый элемент в дерево DOM
+		    parent.appendChild(newDiv);
+		    newDiv.appendChild(repoName);
+		    newDiv.appendChild(repoStars);
+		    newDiv.appendChild(repoLastCommit);
+		    newDiv.appendChild(repoLink);
+		    
+		    repoName.onclick  = function(){
+        		//очищаем старые репозитории
+				var oldParent = document.getElementById("repos-list");
+				var parent = document.createElement("section");
+				var body  = document.getElementById("body");
+				body.replaceChild(parent, oldParent);
+				parent.id = "repos-list";
+				showSelectedRepo(reposTemp[this.id]);
+
+        	}
+		}
+	}
+	var createPaginator = function(){
+		//очищаем старые ссылки на страницы
+		var oldParent = document.getElementById("pages-button-section");
+		var parent = document.createElement("section");
+		var paginator  = document.getElementById("paginator");
+		paginator.replaceChild(parent, oldParent);
+		parent.id = "pages-button-section";
+		//добавляем новые ссылки на страницы
+		for(var i=0;i<reposOnPage;i++){
+			var newDiv = document.createElement("button");
+        	newDiv.innerHTML = paginatorPage*10+i+1;
+        	newDiv.className = "paginator-link";
+        	if(newDiv.innerHTML==currentPage){
+        		newDiv.id = "current-page";
+        		//добавляем текущую страницу в sessionStorage
+        		sessionStorage.setItem('currentPage', currentPage);
+        	}
+        	newDiv.onclick = function(){
+        		$("#current-page").removeAttr("id");
+        		this.id = "current-page";
+        		currentPage = this.innerHTML;
+        		requestReposList(inputRequest);
+        		
+        	}
+        	// Добавляем созданый элемент в дерево DOM
+		    parent.appendChild(newDiv);
+		}
+	}
+	$("#search").click(function(){
+	search(event);
+	createPaginator();
+	} );
+	var currentPage = 1; //страница со списком репозиториев в запросе (запрашиваем пачкой по 10 штук)
+	var paginatorPage = 0;
+	var pagesInRequest;//всего страниц в запросе (число найденных репозиториев/10) 
+	var inputRequest;
+	var reposOnPage = 10;
+	var reposTemp;
+	//клики по кнопкам навигации пейджинатора врепед/назад
+	$("#forward-list").click(function(){
+		console.log(currentPage);
+		if (paginatorPage+1>pagesInRequest){
+			alert("error: Pages not exist")
+		}
+		else{
+			paginatorPage++;
+			createPaginator(reposOnPage);
+			}
+		}
+	);
+	$("#back-list").click(function(){
+		paginatorPage+=-1;
+		console.log(currentPage);
+		if (paginatorPage<0 ){
+			alert("error: Pages not exist")
+			paginatorPage=0;
+		}
+		else{
+			createPaginator();}
+		}
+	);
+
+	var showPopularRepos=function(repos){
+		//очищаем старые репозитории
+		var oldParent = document.getElementById("repos-list");
+		var parent = document.createElement("section");
+		var body  = document.getElementById("body");
+		body.replaceChild(parent, oldParent);
+		parent.id = "repos-list";
+		//добавляем новые ссылки на страницы
+		for(var i=0;i<reposOnPage;i++){
+			var newDiv = document.createElement("div");
+			var repoName = document.createElement("h2")
+			var repoStars = document.createElement("p")
+			var repoLastCommit = document.createElement("p")
+			var repoLink = document.createElement("a")
+        	repoName.innerHTML = repos[i].name;
+        	repoStars.innerHTML =" stars: "+ repos[i].stars;
+        	repoLastCommit.innerHTML = " description: "+repos[i].description;
+			repoLink.innerHTML = repos[i].url;
+			repoName.id = i;
+        	// Добавляем созданый элемент в дерево DOM
+		    parent.appendChild(newDiv);
+		    newDiv.appendChild(repoName);
+		    newDiv.appendChild(repoStars);
+		    newDiv.appendChild(repoLastCommit);
+		    newDiv.appendChild(repoLink);
+		    
+		    repoName.onclick  = function(){
+        		//очищаем старые репозитории
+				var oldParent = document.getElementById("repos-list");
+				var parent = document.createElement("section");
+				var body  = document.getElementById("body");
+				body.replaceChild(parent, oldParent);
+				parent.id = "repos-list";
+				requestReposList(this.innerHTML);
+				showSelectedRepo(reposTemp[0]);
+
+        	}
+		}
+	}
+	var startList=function(){
+		console.log(sessionStorage.getItem('inputRequest')+sessionStorage.getItem('currentPage'))
+		console.log(Object.prototype.toString(sessionStorage.getItem('inputRequest')));
+		if (true){
+			console.log("the most popular repos are shown");
+			fetch('https://github-trending-api.now.sh/repositories?since=daily')
+			.then(response => response.json())
+			.then(data => {
+			  console.log(data) // Prints result from `response.json() 
+			  reposOnPage = 10;
+			  reposTemp = data;
+			  showPopularRepos(data);
+			  
+			})
+			.catch(error => console.error(error))
+
+		}
+		else {
+			currentPage=sessionStorage.getItem('currentPage');
+			showRepos(sessionStorage.getItem('inputRequest'))
+			createPaginator();
+		}
+	}
+	console.log("starting page...")
+	$("document").ready(startList);
+	
+</script>
+
+</html>

@@ -1,0 +1,45 @@
+header{
+	background:#40474a;
+	min-height: 35px;
+	width: 100%;
+	margin: 1px;
+}
+form{
+	position: relative;
+	padding:20px;
+}
+input {
+	placeholder-color: #91aa8d;
+}
+body{
+	width: 100%;
+	display:block;
+}
+footer{
+	position: static;
+	display:flex;
+	flex-direction: row;
+	background: #40474a;
+	margin: 0px;
+	padding: 3%;
+	width: 100%;
+	height: 30px;
+}
+.page-list {
+	display:flex;
+	
+}
+#current-page{
+	background: #1b1b42;
+}
+.paginator-link{
+	color: #47474a;
+	margin: 10px;
+	padding: 7px;
+	background: #d8edd3;
+	border-radius: 5px;
+}
+.page-list	{
+	border-radius: 10px;
+	background: #d8edd3;
+}
