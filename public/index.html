@@ -141,6 +141,9 @@
 		}
 	}
 	var createPaginator = function(){
+
+		
+
 		//очищаем старые ссылки на страницы
 		var oldParent = document.getElementById("pages-button-section");
 		var parent = document.createElement("section");
@@ -225,6 +228,7 @@
 			inputRequest=sessionStorage.getItem('inputRequest');
 			console.log(inputRequest+currentPage);
 			requestReposList(inputRequest);
+			document.getElementById("input").value=inputRequest;
 			createPaginator();
 			showRepos(reposTemp);
 			
