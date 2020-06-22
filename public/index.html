@@ -27,11 +27,7 @@
 <script src="https://code.jquery.com/jquery-2.1.0.js"></script>
 <script>
 	var search = function (event){
-		event.preventDefault();//не перезагружаем страницу
-		inputRequest = document.getElementById("input").value;//введенные данные
-		//сохраняем введенные данные в sessionStorage
-		sessionStorage.setItem('inputRequest', inputRequest);
-		requestReposList(inputRequest);
+		
 		
 	}
 	//api-запрос к gitHub
@@ -42,8 +38,11 @@
 		.then(data => {
 		  console.log(data) // Prints result from `response.json() 
 		  reposOnPage = data.items.length;
-		  showRepos(data.items);
 		  reposTemp = data.items;
+		  showRepos(reposTemp);
+		  
+		  //sessionStorage.setItem('inputRequest',inputRequest);
+		  sessionStorage.setItem('currentPage',currentPage);
 		})
 		.catch(error => console.error(error))
 	}
@@ -169,8 +168,13 @@
 		    parent.appendChild(newDiv);
 		}
 	}
-	$("#search").click(function(){
-	search(event);
+	$("#search").click(function(event){
+	event.preventDefault();//не перезагружаем страницу
+	inputRequest = document.getElementById("input").value;//введенные данные
+	currentPage = 1;
+	//сохраняем введенные данные в sessionStorage
+	sessionStorage.setItem('inputRequest', inputRequest);
+	requestReposList(inputRequest);
 	createPaginator();
 	} );
 	var currentPage = 1; //страница со списком репозиториев в запросе (запрашиваем пачкой по 10 штук)
@@ -203,71 +207,33 @@
 		}
 	);
 
-	var showPopularRepos=function(repos){
-		//очищаем старые репозитории
-		var oldParent = document.getElementById("repos-list");
-		var parent = document.createElement("section");
-		var body  = document.getElementById("body");
-		body.replaceChild(parent, oldParent);
-		parent.id = "repos-list";
-		//добавляем новые ссылки на страницы
-		for(var i=0;i<reposOnPage;i++){
-			var newDiv = document.createElement("div");
-			var repoName = document.createElement("h2")
-			var repoStars = document.createElement("p")
-			var repoLastCommit = document.createElement("p")
-			var repoLink = document.createElement("a")
-        	repoName.innerHTML = repos[i].name;
-        	repoStars.innerHTML =" stars: "+ repos[i].stars;
-        	repoLastCommit.innerHTML = " description: "+repos[i].description;
-			repoLink.innerHTML = repos[i].url;
-			repoName.id = i;
-        	// Добавляем созданый элемент в дерево DOM
-		    parent.appendChild(newDiv);
-		    newDiv.appendChild(repoName);
-		    newDiv.appendChild(repoStars);
-		    newDiv.appendChild(repoLastCommit);
-		    newDiv.appendChild(repoLink);
-		    
-		    repoName.onclick  = function(){
-        		//очищаем старые репозитории
-				var oldParent = document.getElementById("repos-list");
-				var parent = document.createElement("section");
-				var body  = document.getElementById("body");
-				body.replaceChild(parent, oldParent);
-				parent.id = "repos-list";
-				requestReposList(this.innerHTML);
-				showSelectedRepo(reposTemp[0]);
 
-        	}
-		}
-	}
 	var startList=function(){
-		console.log(sessionStorage.getItem('inputRequest')+sessionStorage.getItem('currentPage'))
-		console.log(Object.prototype.toString(sessionStorage.getItem('inputRequest')));
-		if (true){
-			console.log("the most popular repos are shown");
-			fetch('https://github-trending-api.now.sh/repositories?since=daily')
-			.then(response => response.json())
-			.then(data => {
-			  console.log(data) // Prints result from `response.json() 
-			  reposOnPage = 10;
-			  reposTemp = data;
-			  showPopularRepos(data);
-			  
-			})
-			.catch(error => console.error(error))
-
-		}
-		else {
-			currentPage=sessionStorage.getItem('currentPage');
-			showRepos(sessionStorage.getItem('inputRequest'))
+		
+		if (sessionStorage.getItem('inputRequest')==undefined){
+			console.log("the most popular repos will shown");
+			requestReposList('stars%3A>%3D500')
 			createPaginator();
+			}
+
+
+		
+		else {
+			console.log("the last page will shown");
+			console.log(sessionStorage.getItem('inputRequest')+sessionStorage.getItem('currentPage'));
+			currentPage=sessionStorage.getItem('currentPage');
+			inputRequest=sessionStorage.getItem('inputRequest');
+			console.log(inputRequest+currentPage);
+			requestReposList(inputRequest);
+			createPaginator();
+			showRepos(reposTemp);
+			
 		}
 	}
+
 	console.log("starting page...")
 	$("document").ready(startList);
-	
+
 </script>
 
 </html>
